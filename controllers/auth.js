@@ -1,17 +1,17 @@
-const {response} = require('express');
+const { response } = require('express');
 const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require('../helpers/jwt');
 
 
-const crearUsuario = async (req, res=response)=>{
-    const {name, email, password} = req.body;
+const crearUsuario = async (req, res = response) => {
+    const { name, email, password } = req.body;
 
     try {
         // validar el email que no exista en la base de datos
-        const usuario = await Usuario.findOne({email});
+        const usuario = await Usuario.findOne({ email });
 
-        if(usuario){
+        if (usuario) {
             return res.status(400).json({
                 ok: false,
                 msg: 'el usuario ya existe en la base de datos'
@@ -37,9 +37,10 @@ const crearUsuario = async (req, res=response)=>{
             msg: 'usuario creado con exito',
             uid: dbUser.id,
             name,
+            email,
             token
         });
-        
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -50,12 +51,12 @@ const crearUsuario = async (req, res=response)=>{
 
 }
 
-const loginUsuario = async(req, res=response)=>{
-    const {email, password} = req.body;
+const loginUsuario = async (req, res = response) => {
+    const { email, password } = req.body;
     try {
-        const dbUser = await Usuario.findOne({email});
+        const dbUser = await Usuario.findOne({ email });
 
-        if(!dbUser){
+        if (!dbUser) {
             return res.status(400).json({
                 ok: false,
                 msg: 'el email no esta registrado'
@@ -64,7 +65,7 @@ const loginUsuario = async(req, res=response)=>{
 
         // confirmar si la contraseña esta registrada en la base de datos
         const validPassword = bcrypt.compareSync(password, dbUser.password);
-        if(!validPassword){
+        if (!validPassword) {
             return res.status(400).json({
                 ok: false,
                 msg: 'el password no esta registrado'
@@ -80,6 +81,7 @@ const loginUsuario = async(req, res=response)=>{
             msg: 'login exitoso',
             uid: dbUser.id,
             name: dbUser.name,
+            email: dbUser.email,
             token
         });
 
@@ -92,16 +94,21 @@ const loginUsuario = async(req, res=response)=>{
     }
 }
 
-const revalidarToken = async(req, res)=>{
+const revalidarToken = async (req, res) => {
 
-    const {uid, name} = req;
-    const token = await generarJWT(uid, name);
-    
+    const { uid } = req;
+
+    // leer la base de datos para obtener el email
+    const dbUser = await Usuario.findById(uid);
+
+    const token = await generarJWT(uid, dbUser.name);
+
     return res.json({
         ok: true,
         msg: 'token valido',
         uid,
-        name,
+        name: dbUser.name,
+        email:dbUser.email,
         token
     });
 }
